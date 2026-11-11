@@ -1,239 +1,292 @@
 
-const games = [
-  {
-    id: 1,
-    name: "Grand Theft Auto VI",
-    shortName: "GTA VI",
-    platforms: ["PlayStation", "Xbox"],
-    image: "https://placehold.co/400x550/17152c/a98aff?text=GTA+VI",
-    description: "Découvre les informations et les offres disponibles pour Grand Theft Auto VI.",
-    offers: []
-  },
-  {
-    id: 2,
-    name: "Minecraft",
-    platforms: ["PC", "PlayStation", "Xbox", "Nintendo"],
-    image: "https://placehold.co/400x550/18351e/ffffff?text=Minecraft",
-    description: "Explore un monde composé de blocs et construis ce que tu imagines.",
-    offers: []
-  },
-  {
-    id: 3,
-    name: "Red Dead Redemption 2",
-    platforms: ["PC", "PlayStation", "Xbox"],
-    image: "https://placehold.co/400x550/54251e/ffffff?text=Red+Dead+2",
-    description: "Une aventure en monde ouvert dans l'univers du Far West.",
-    offers: []
-  },
-  {
-    id: 4,
-    name: "Cyberpunk 2077",
-    platforms: ["PC", "PlayStation", "Xbox"],
-    image: "https://placehold.co/400x550/302b17/f7df45?text=Cyberpunk+2077",
-    description: "Un jeu de rôle en monde ouvert dans une ville futuriste.",
-    offers: []
-  },
-  {
-    id: 5,
-    name: "Rocket League",
-    platforms: ["PC", "PlayStation", "Xbox", "Nintendo"],
-    image: "https://placehold.co/400x550/123454/ffffff?text=Rocket+League",
-    description: "Du football avec des voitures propulsées par des fusées.",
-    offers: []
-  },
-  {
-    id: 6,
-    name: "EA SPORTS FC 26",
-    platforms: ["PC", "PlayStation", "Xbox", "Nintendo"],
-    image: "https://placehold.co/400x550/173b29/ffffff?text=EA+FC+26",
-    description: "Retrouve le football avec EA SPORTS FC 26.",
-    offers: []
+const API = "https://www.cheapshark.com/api/1.0";
+
+const elements = {
+  form: document.getElementById("searchForm"),
+  input: document.getElementById("gameSearch"),
+  results: document.getElementById("gameResults"),
+  count: document.getElementById("resultCount"),
+  empty: document.getElementById("emptyState"),
+  status: document.getElementById("statusMessage"),
+  section: document.getElementById("results"),
+  details: document.getElementById("gameDetails"),
+  detailsContent: document.getElementById("detailsContent"),
+  back: document.getElementById("backButton")
+};
+
+let stores = {};
+let searchNumber = 0;
+
+async function apiRequest(endpoint) {
+  const response = await fetch(API + endpoint);
+
+  if (response.status === 429) {
+    throw new Error("Trop de recherches en peu de temps. Réessaie plus tard.");
   }
-];
 
-const results = document.getElementById("gameResults");
-const searchInput = document.getElementById("gameSearch");
-const searchForm = document.getElementById("searchForm");
-const resultCount = document.getElementById("resultCount");
-const emptyState = document.getElementById("emptyState");
-const resultsSection = document.getElementById("results");
-const detailsSection = document.getElementById("gameDetails");
-const detailsContent = document.getElementById("detailsContent");
+  if (!response.ok) {
+    throw new Error("Le service de recherche est momentanément indisponible.");
+  }
 
-let currentGames = [...games];
-let currentPlatform = "all";
+  return response.json();
+}
 
-function renderGames(list) {
-  results.innerHTML = "";
+async function loadStores() {
+  try {
+    const data = await apiRequest("/stores");
 
-  resultCount.textContent = list.length + (list.length > 1 ? " JEUX" : " JEU");
+    data.forEach(store => {
+      stores[store.storeID] = store.storeName;
+    });
+  } catch (error) {
+    console.warn("Liste des boutiques indisponible", error);
+  }
+}
 
-  emptyState.style.display = list.length ? "none" : "block";
+function setStatus(message, type = "") {
+  elements.status.textContent = message;
+  elements.status.className = "status-message " + type;
+}
 
-  list.forEach(game => {
-    const card = document.createElement("article");
-    card.className = "game-card";
+function createElement(tag, className, text) {
+  const element = document.createElement(tag);
 
-    const cover = document.createElement("img");
-    cover.className = "game-cover";
-    cover.src = game.image;
-    cover.alt = "Jaquette de " + game.name;
-    cover.loading = "lazy";
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
 
-    cover.onerror = () => {
-      cover.src = "https://placehold.co/400x550/17152c/ffffff?text=GAME";
+  return element;
+}
+
+function showEmpty(show) {
+  elements.empty.style.display = show ? "block" : "none";
+}
+
+function formatPrice(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) return "Prix indisponible";
+
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "USD"
+  }).format(number);
+}
+
+function renderGames(games) {
+  elements.results.innerHTML = "";
+
+  elements.count.textContent =
+    games.length + (games.length > 1 ? " JEUX" : " JEU");
+
+  showEmpty(games.length === 0);
+
+  games.forEach(game => {
+    const card = createElement("article", "game-card");
+
+    const image = createElement("img", "game-cover");
+    image.src = game.thumb || "https://placehold.co/400x550/17152c/ffffff?text=GAME";
+    image.alt = "Jaquette de " + game.external;
+    image.loading = "lazy";
+
+    image.onerror = () => {
+      image.src = "https://placehold.co/400x550/17152c/ffffff?text=GAME";
     };
 
-    const info = document.createElement("div");
-    info.className = "game-info";
+    const info = createElement("div", "game-info");
+    const title = createElement("h3", "", game.external);
+    const platform = createElement("span", "platform-tag", "PC");
 
-    const title = document.createElement("h3");
-    title.textContent = game.name;
+    const bottom = createElement("div", "card-bottom");
+    const cheapest = createElement(
+      "span",
+      "",
+      game.cheapest ? "Dès " + formatPrice(game.cheapest) : "Prix indisponible"
+    );
 
-    const tags = document.createElement("div");
+    const view = createElement("span", "", "VOIR →");
 
-    game.platforms.forEach(platform => {
-      const tag = document.createElement("span");
-      tag.className = "platform-tag";
-      tag.textContent = platform;
-      tags.appendChild(tag);
-    });
+    bottom.append(cheapest, view);
+    info.append(title, platform, bottom);
+    card.append(image, info);
 
-    const bottom = document.createElement("div");
-    bottom.className = "card-bottom";
-    bottom.innerHTML = "<span>GAME.DEALS</span><span>VOIR →</span>";
+    card.addEventListener("click", () => openGame(game.gameID));
 
-    info.append(title, tags, bottom);
-    card.append(cover, info);
-
-    card.addEventListener("click", () => openGame(game.id));
-
-    results.appendChild(card);
+    elements.results.appendChild(card);
   });
 }
 
-function searchGames() {
-  const query = searchInput.value.trim().toLowerCase();
+async function searchGames() {
+  const query = elements.input.value.trim();
 
-  currentGames = games.filter(game => {
-    const matchesName =
-      game.name.toLowerCase().includes(query) ||
-      (game.shortName && game.shortName.toLowerCase().includes(query));
-
-    const matchesPlatform =
-      currentPlatform === "all" ||
-      game.platforms.includes(currentPlatform);
-
-    return matchesName && matchesPlatform;
-  });
-
-  renderGames(currentGames);
-
-  detailsSection.style.display = "none";
-  resultsSection.style.display = "block";
-}
-
-function openGame(id) {
-  const game = games.find(item => item.id === id);
-
-  if (!game) return;
-
-  resultsSection.style.display = "none";
-  detailsSection.style.display = "block";
-
-  detailsContent.innerHTML = "";
-
-  const layout = document.createElement("div");
-  layout.className = "detail-layout";
-
-  const cover = document.createElement("img");
-  cover.className = "detail-cover";
-  cover.src = game.image;
-  cover.alt = game.name;
-
-  const info = document.createElement("div");
-  info.className = "detail-info";
-
-  const title = document.createElement("h2");
-  title.textContent = game.name;
-
-  const description = document.createElement("p");
-  description.className = "detail-description";
-  description.textContent = game.description;
-
-  const platforms = document.createElement("div");
-
-  game.platforms.forEach(platform => {
-    const tag = document.createElement("span");
-    tag.className = "platform-tag";
-    tag.textContent = platform;
-    platforms.appendChild(tag);
-  });
-
-  info.append(title, platforms, description);
-  layout.append(cover, info);
-
-  const offersTitle = document.createElement("h3");
-  offersTitle.className = "offers-title";
-  offersTitle.textContent = "Comparer les offres";
-
-  const offers = document.createElement("div");
-
-  if (!game.offers.length) {
-    const message = document.createElement("p");
-    message.className = "no-offers";
-    message.textContent =
-      "Les offres des boutiques seront bientôt disponibles.";
-    offers.appendChild(message);
-  } else {
-    game.offers.forEach(offer => {
-      const row = document.createElement("div");
-      row.className = "offer-card";
-
-      const shop = document.createElement("strong");
-      shop.textContent = offer.shop;
-
-      const price = document.createElement("span");
-      price.textContent = offer.price;
-
-      const link = document.createElement("a");
-      link.href = offer.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = "VOIR L'OFFRE";
-
-      row.append(shop, price, link);
-      offers.appendChild(row);
-    });
+  if (query.length < 2) {
+    setStatus("Entre au moins deux caractères.", "error");
+    return;
   }
 
-  detailsContent.append(layout, offersTitle, offers);
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  const requestId = ++searchNumber;
+
+  elements.details.style.display = "none";
+  elements.section.style.display = "block";
+  elements.results.innerHTML = "";
+  elements.count.textContent = "RECHERCHE...";
+  showEmpty(false);
+  setStatus("Recherche des jeux en cours...");
+
+  elements.section.scrollIntoView({ behavior: "smooth" });
+
+  try {
+    const data = await apiRequest(
+      "/games?title=" + encodeURIComponent(query) + "&limit=30"
+    );
+
+    if (requestId !== searchNumber) return;
+
+    const games = Array.isArray(data) ? data : [];
+
+    renderGames(games);
+
+    if (games.length) {
+      setStatus(games.length + " résultat(s) trouvé(s).", "success");
+    } else {
+      setStatus("Aucun jeu correspondant dans la base de prix PC.");
+    }
+  } catch (error) {
+    if (requestId !== searchNumber) return;
+
+    elements.count.textContent = "ERREUR";
+    showEmpty(false);
+    setStatus(error.message, "error");
+  }
 }
 
-searchForm.addEventListener("submit", event => {
+async function openGame(gameId) {
+  elements.section.style.display = "none";
+  elements.details.style.display = "block";
+  elements.detailsContent.innerHTML = "";
+  elements.detailsContent.append(
+    createElement("p", "no-offers", "Chargement des offres...")
+  );
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  try {
+    const game = await apiRequest("/games?id=" + encodeURIComponent(gameId));
+
+    if (!game || !game.info) {
+      throw new Error("Informations du jeu introuvables.");
+    }
+
+    renderGameDetails(game);
+  } catch (error) {
+    elements.detailsContent.innerHTML = "";
+    elements.detailsContent.append(
+      createElement("p", "no-offers", error.message)
+    );
+  }
+}
+
+function renderGameDetails(game) {
+  const info = game.info;
+  const deals = Array.isArray(game.deals) ? game.deals : [];
+
+  elements.detailsContent.innerHTML = "";
+
+  const layout = createElement("div", "detail-layout");
+
+  const cover = createElement("img", "detail-cover");
+  cover.src = info.thumb || "https://placehold.co/400x550/17152c/ffffff?text=GAME";
+  cover.alt = info.title;
+
+  const description = createElement(
+    "p",
+    "detail-description",
+    "Comparaison des offres PC actuellement répertoriées pour " +
+    info.title + "."
+  );
+
+  const content = createElement("div", "detail-info");
+  const title = createElement("h2", "", info.title);
+  const platform = createElement("span", "platform-tag", "PC");
+
+  content.append(title, platform, description);
+  layout.append(cover, content);
+
+  elements.detailsContent.append(layout);
+
+  const heading = createElement("h3", "offers-title", "Comparer les boutiques");
+  elements.detailsContent.append(heading);
+
+  deals.sort((a, b) => Number(a.price) - Number(b.price));
+
+  if (deals.length === 0) {
+    elements.detailsContent.append(
+      createElement(
+        "p",
+        "no-offers",
+        "Aucune offre actuellement répertoriée pour ce jeu."
+      )
+    );
+  }
+
+  deals.forEach(deal => {
+    const row = createElement("div", "offer-card");
+
+    const storeName =
+      stores[deal.storeID] || "Boutique partenaire";
+
+    const store = createElement("strong", "", storeName);
+
+    const priceBox = createElement("div");
+    const price = createElement("span", "", formatPrice(deal.price));
+
+    priceBox.append(price);
+
+    const savings = Number(deal.savings);
+
+    if (Number.isFinite(savings) && savings > 0) {
+      priceBox.append(
+        createElement(
+          "small",
+          "discount-label",
+          "-" + Math.round(savings) + "%"
+        )
+      );
+    }
+
+    const link = createElement("a", "", "VOIR L'OFFRE");
+    link.href =
+      "https://www.cheapshark.com/redirect?dealID=" +
+      encodeURIComponent(deal.dealID);
+
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+
+    row.append(store, priceBox, link);
+    elements.detailsContent.append(row);
+  });
+
+  const source = createElement("p", "source-credit");
+  const sourceLink = createElement("a", "", "Données fournies par CheapShark");
+
+  sourceLink.href = "https://www.cheapshark.com/";
+  sourceLink.target = "_blank";
+  sourceLink.rel = "noopener noreferrer";
+
+  source.append(sourceLink);
+  elements.detailsContent.append(source);
+}
+
+elements.form.addEventListener("submit", event => {
   event.preventDefault();
   searchGames();
-  resultsSection.scrollIntoView({ behavior: "smooth" });
 });
 
-document.querySelectorAll(".filter").forEach(button => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".filter").forEach(item => {
-      item.classList.remove("active");
-    });
-
-    button.classList.add("active");
-    currentPlatform = button.dataset.platform;
-    searchGames();
-  });
+elements.back.addEventListener("click", () => {
+  elements.details.style.display = "none";
+  elements.section.style.display = "block";
+  elements.section.scrollIntoView({ behavior: "smooth" });
 });
 
-document.getElementById("backButton").addEventListener("click", () => {
-  detailsSection.style.display = "none";
-  resultsSection.style.display = "block";
-  resultsSection.scrollIntoView({ behavior: "smooth" });
-});
-
-renderGames(games);
-    
+loadStores();
+showEmpty(false);
+  
