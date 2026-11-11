@@ -17,29 +17,40 @@ const elements = {
 let stores = {};
 let searchNumber = 0;
 
+
 async function apiRequest(endpoint) {
-  const response = await fetch(API + endpoint);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
 
-  if (response.status === 429) {
-    throw new Error("Trop de recherches en peu de temps. Réessaie plus tard.");
-  }
-
-  if (!response.ok) {
-    throw new Error("Le service de recherche est momentanément indisponible.");
-  }
-
-  return response.json();
-}
-
-async function loadStores() {
   try {
-    const data = await apiRequest("/stores");
+    const response = await fetch(
+      "https://www.cheapshark.com/api/1.0" + endpoint,
+      {
+        method: "GET",
+        headers: {
+          "Accept": "application/json"
+        },
+        signal: controller.signal
+      }
+    );
 
-    data.forEach(store => {
-      stores[store.storeID] = store.storeName;
-    });
+    if (!response.ok) {
+      throw new Error("Erreur API : HTTP " + response.status);
+    }
+
+    return await response.json();
+
   } catch (error) {
-    console.warn("Liste des boutiques indisponible", error);
+    if (error.name === "AbortError") {
+      throw new Error("La recherche a dépassé 12 secondes.");
+    }
+
+    throw new Error(
+      error.message || "Impossible de contacter CheapShark."
+    );
+
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
