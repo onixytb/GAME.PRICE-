@@ -1,0 +1,100 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090914">
+  <title>GAME.DEALS - Compare les prix des jeux</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="header">
+    <a href="#" class="logo">GAME<span>.DEALS</span></a>
+
+    <nav>
+      <a href="#home">Accueil</a>
+      <a href="#results">Jeux</a>
+    </nav>
+
+    <div class="free-label">100% GRATUIT</div>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-content">
+        <div class="tag">✦ THE ULTIMATE GAME COMPARATOR</div>
+
+        <h1>
+          TROUVE TON JEU.<br>
+          <span>AU MEILLEUR PRIX.</span>
+        </h1>
+
+        <p class="hero-description">
+          Recherche un jeu vidéo et compare les offres
+          de plusieurs boutiques en quelques secondes.
+        </p>
+
+        <form class="search-box" id="searchForm">
+          <span class="search-icon">⌕</span>
+          <input
+            type="search"
+            id="gameSearch"
+            placeholder="Exemple : GTA VI, Minecraft, Fortnite..."
+            autocomplete="off"
+          >
+          <button type="submit">RECHERCHER <span>→</span></button>
+        </form>
+
+        <div class="search-info">
+          <span>✓ Toutes plateformes</span>
+          <span>✓ Gratuit</span>
+          <span>✓ Comparaison simple</span>
+        </div>
+      </div>
+
+      <div class="hero-glow"></div>
+    </section>
+
+    <section class="results-section" id="results">
+      <div class="section-heading">
+        <div>
+          <p class="section-label">DISCOVER</p>
+          <h2>Explorer les jeux</h2>
+        </div>
+        <span class="result-count" id="resultCount">0 JEUX</span>
+      </div>
+
+      <div class="filters">
+        <button class="filter active" data-platform="all">Tous</button>
+        <button class="filter" data-platform="PC">PC</button>
+        <button class="filter" data-platform="PlayStation">PlayStation</button>
+        <button class="filter" data-platform="Xbox">Xbox</button>
+        <button class="filter" data-platform="Nintendo">Nintendo</button>
+      </div>
+
+      <div class="game-grid" id="gameResults"></div>
+
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">⌕</div>
+        <h3>Aucun jeu trouvé</h3>
+        <p>Essaie avec un autre nom de jeu.</p>
+      </div>
+    </section>
+
+    <section class="details-section" id="gameDetails">
+      <button class="back-button" id="backButton">← Retour aux jeux</button>
+      <div id="detailsContent"></div>
+    </section>
+  </main>
+
+  <footer>
+    <a href="#" class="logo">GAME<span>.DEALS</span></a>
+    <p>FIND IT. COMPARE IT. SAVE IT.</p>
+    <p class="copyright">© 2026 GAME.DEALS — ALL RIGHTS RESERVED</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
